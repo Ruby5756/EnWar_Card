@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gothic Cyber-Tactical Battle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        #health-display {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 100px;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .health-bar {
+            background: linear-gradient(90deg, #330000, #660000);
+            border: 2px solid #ff0000;
+            border-radius: 4px;
+            padding: 10px 20px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .health-value {
+            font-weight: bold;
+            color: #ff4444;
+        }
+
+        #mana-display {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 50px;
+            font-size: 18px;
+        }
+
+        .mana-bar {
+            background: linear-gradient(90deg, #003366, #0066cc);
+            border: 2px solid #00aaff;
+            border-radius: 4px;
+            padding: 8px 16px;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .mana-value {
+            font-weight: bold;
+            color: #44aaff;
+        }
+
+        #phase-indicator {
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #00ff88;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.7);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 30px;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+        }
+
+        #round-display {
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #ffaa00;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+
+        #action-log {
+            bottom: 100px;
+            right: 20px;
+            width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 12px;
+            pointer-events: auto;
+        }
+
+        #action-log p {
+            margin: 5px 0;
+            padding: 3px;
+            border-bottom: 1px solid #222;
+        }
+
+        #action-log .player-action {
+            color: #44aaff;
+        }
+
+        #action-log .bot-action {
+            color: #ff4444;
+        }
+
+        #action-log .system-message {
+            color: #888;
+            font-style: italic;
+        }
+
+        #hand-container {
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .card {
+            width: 80px;
+            height: 110px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid #4a4a6a;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px;
+            font-size: 11px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: #00aaff;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+        }
+
+        .card.selected {
+            border-color: #ffaa00;
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.7);
+        }
+
+        .card.glitched {
+            animation: glitch 0.5s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+        }
+
+        .card-name {
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+        }
+
+        .card-stats {
+            color: #aaa;
+            text-align: center;
+        }
+
+        .card-mana {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: #0066cc;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .status-effects {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .status-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+        .status-poison { background: #6600cc; color: #fff; }
+        .status-ice { background: #00aaff; color: #fff; }
+        .status-wind { background: #00ff88; color: #000; }
+        .status-earth { background: #8b4513; color: #fff; }
+        .status-electric { background: #ffdd00; color: #000; }
+
+        #replace-btn {
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #660000, #990000);
+            border: 2px solid #ff4444;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            pointer-events: auto;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #replace-btn:hover {
+            background: linear-gradient(135deg, #990000, #cc0000);
+        }
+
+        #replace-btn.visible {
+            display: block;
+        }
+
+        #confirm-btn {
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #006600, #009900);
+            border: 2px solid #44ff44;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            pointer-events: auto;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #confirm-btn:hover {
+            background: linear-gradient(135deg, #009900, #00cc00);
+        }
+
+        #confirm-btn.visible {
+            display: block;
+        }
+
+        .billboard-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: auto;
+        }
+
+        #game-over h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px currentColor;
+        }
+
+        #game-over.victory h1 {
+            color: #00ff88;
+        }
+
+        #game-over.defeat h1 {
+            color: #ff4444;
+        }
+
+        #restart-btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid #4a4a6a;
+            color: #fff;
+            font-family: inherit;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        #restart-btn:hover {
+            border-color: #00aaff;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="canvas-container"></div>
+        
+        <div class="ui-overlay" id="health-display">
+            <div class="health-bar">
+                <span>PLAYER: </span><span class="health-value" id="player-hp">300</span>
+            </div>
+            <div class="health-bar">
+                <span>BOT: </span><span class="health-value" id="bot-hp">300</span>
+            </div>
+        </div>
+
+        <div class="ui-overlay" id="phase-indicator">PLANNING PHASE</div>
+        <div class="ui-overlay" id="round-display">ROUND 1</div>
+
+        <div class="ui-overlay" id="mana-display">
+            <div class="mana-bar">
+                <span>MANA: </span><span class="mana-value" id="player-mana">10</span>
+            </div>
+            <div class="mana-bar">
+                <span>BOT MANA: </span><span class="mana-value" id="bot-mana">10</span>
+            </div>
+        </div>
+
+        <div class="ui-overlay" id="hand-container"></div>
+        <button class="ui-overlay" id="replace-btn">REPLACE CARD</button>
+        <button class="ui-overlay" id="confirm-btn">CONFIRM ACTIONS</button>
+
+        <div class="ui-overlay" id="action-log"></div>
+
+        <div id="game-over">
+            <h1 id="game-over-text">VICTORY</h1>
+            <button id="restart-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ==================== GAME CONSTANTS ====================
+        const GRID_ROWS = 2;
+        const GRID_COLS = 8;
+        const TOTAL_SLOTS = 16;
+        const SLOT_WIDTH = 1.2;
+        const SLOT_HEIGHT = 1.5;
+        const LANE_COUNT = 4;
+
+        const PHASE = {
+            PLANNING: 'planning',
+            EXECUTION: 'execution',
+            CLEANUP: 'cleanup'
+        };
+
+        const STATUS_TYPES = {
+            POISON: 'poison',
+            ICE: 'ice',
+            WIND: 'wind',
+            EARTH: 'earth',
+            ELECTRIC: 'electric'
+        };
+
+        const ACTION_TYPES = {
+            ATTACK: 'attack',
+            SKILL: 'skill',
+            REPLACE: 'replace'
+        };
+
+        // ==================== OBJECT POOLING ====================
+        class ObjectPool {
+            constructor(createFn, initialSize = 20) {
+                this.createFn = createFn;
+                this.pool = [];
+                this.active = [];
+                
+                for (let i = 0; i < initialSize; i++) {
+                    this.pool.push(createFn());
+                }
+            }
+
+            get() {
+                if (this.pool.length > 0) {
+                    const obj = this.pool.pop();
+                    obj.visible = true;
+                    this.active.push(obj);
+                    return obj;
+                }
+                const obj = this.createFn();
+                obj.visible = true;
+                this.active.push(obj);
+                return obj;
+            }
+
+            release(obj) {
+                const idx = this.active.indexOf(obj);
+                if (idx !== -1) {
+                    this.active.splice(idx, 1);
+                    obj.visible = false;
+                    this.pool.push(obj);
+                }
+            }
+
+            releaseAll() {
+                while (this.active.length > 0) {
+                    this.release(this.active[0]);
+                }
+            }
+        }
+
+        // ==================== CARD CLASS ====================
+        class Card {
+            constructor(id, owner) {
+                this.id = id;
+                this.owner = owner;
+                this.name = '';
+                this.manaCost = 1;
+                this.hitPercent = 95 + Math.random() * 5;
+                this.dodgePercent = Math.random() * 5;
+                this.damage = 20 + Math.random() * 10;
+                this.statusEffects = {};
+                this.hp = 100;
+                this.maxHp = 100;
+                this.isDead = false;
+                this.slotIndex = -1;
+                this.mesh = null;
+                this.ghostMesh = null;
+            }
+
+            clone() {
+                const newCard = new Card(this.id, this.owner);
+                newCard.name = this.name;
+                newCard.manaCost = this.manaCost;
+                newCard.hitPercent = this.hitPercent;
+                newCard.dodgePercent = this.dodgePercent;
+                newCard.damage = this.damage;
+                newCard.hp = this.hp;
+                newCard.maxHp = this.maxHp;
+                newCard.statusEffects = {...this.statusEffects};
+                return newCard;
+            }
+
+            getEffectiveHit() {
+                let hit = this.hitPercent;
+                if (this.statusEffects[STATUS_TYPES.WIND]) {
+                    hit -= this.statusEffects[STATUS_TYPES.WIND] * 10;
+                }
+                return Math.max(70, Math.min(100, hit));
+            }
+
+            getEffectiveDodge() {
+                let dodge = this.dodgePercent;
+                if (this.statusEffects[STATUS_TYPES.EARTH]) {
+                    dodge -= this.statusEffects[STATUS_TYPES.EARTH] * 15;
+                }
+                return Math.max(0, Math.min(30, dodge));
+            }
+
+            canUseAbility() {
+                return !this.statusEffects[STATUS_TYPES.ICE];
+            }
+
+            addStatus(type, level) {
+                if (!this.statusEffects[type] || this.statusEffects[type] < level) {
+                    this.statusEffects[type] = level;
+                }
+            }
+
+            removeStatus(type) {
+                delete this.statusEffects[type];
+            }
+
+            takeDamage(amount) {
+                this.hp -= amount;
+                if (this.hp <= 0 && !this.isDead) {
+                    this.isDead = true;
+                }
+                return this.hp;
+            }
+
+            heal(amount) {
+                this.hp = Math.min(this.maxHp, this.hp + amount);
+                if (this.hp > 0) {
+                    this.isDead = false;
+                }
+            }
+        }
+
+        // ==================== GAME STATE ====================
+        class GameState {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.playerHP = 300;
+                this.botHP = 300;
+                this.playerMana = 10;
+                this.botMana = 10;
+                this.round = 1;
+                this.phase = PHASE.PLANNING;
+                this.playerHand = [];
+                this.botHand = [];
+                this.playerBoard = this.createEmptyBoard();
+                this.botBoard = this.createEmptyBoard();
+                this.playerActions = [];
+                this.botActions = [];
+                this.actionQueue = [];
+                this.selectedCard = null;
+                this.selectedSlot = null;
+                this.gameOver = false;
+                this.winner = null;
+            }
+
+            createEmptyBoard() {
+                const board = [];
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    board[row] = [];
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        board[row][col] = null;
+                    }
+                }
+                return board;
+            }
+
+            drawCard(owner) {
+                const card = new Card(Date.now() + Math.random(), owner);
+                card.name = `Card-${Math.floor(Math.random() * 1000)}`;
+                
+                if (owner === 'player') {
+                    this.playerHand.push(card);
+                } else {
+                    this.botHand.push(card);
+                }
+                
+                return card;
+            }
+
+            startRound() {
+                this.drawCard('player');
+                this.drawCard('bot');
+                this.playerMana = Math.min(20, this.playerMana + 3);
+                this.botMana = Math.min(20, this.botMana + 3);
+                this.phase = PHASE.PLANNING;
+                this.playerActions = [];
+                this.botActions = [];
+                this.actionQueue = [];
+            }
+
+            addAction(owner, action) {
+                if (owner === 'player') {
+                    this.playerActions.push(action);
+                } else {
+                    this.botActions.push(action);
+                }
+            }
+
+            buildActionQueue() {
+                this.actionQueue = [];
+                const maxLen = Math.max(this.playerActions.length, this.botActions.length);
+                
+                for (let i = 0; i < maxLen; i++) {
+                    if (i < this.playerActions.length) {
+                        this.actionQueue.push({ owner: 'player', ...this.playerActions[i] });
+                    }
+                    if (i < this.botActions.length) {
+                        this.actionQueue.push({ owner: 'bot', ...this.botActions[i] });
+                    }
+                }
+            }
+        }
+
+        // ==================== BOT AI ====================
+        class BotAI {
+            constructor(gameState, gameView) {
+                this.gameState = gameState;
+                this.gameView = gameView;
+            }
+
+            makeDecision() {
+                const state = this.gameState;
+                if (state.botHand.length === 0) return;
+
+                const hand = [...state.botHand];
+                const board = state.botBoard;
+                let mana = state.botMana;
+
+                // Find low HP player cards to target
+                const lowHPCards = this.findLowHPCards(state.playerBoard);
+
+                // Try to fill empty slots first
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        if (!board[row][col] && mana >= 1) {
+                            const card = hand.shift();
+                            if (card) {
+                                state.addAction('bot', {
+                                    type: ACTION_TYPES.SKILL,
+                                    card: card,
+                                    slot: { row, col }
+                                });
+                                mana -= card.manaCost;
+                                state.botHand = hand;
+                                state.botMana = mana;
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // Smart replace: replace weak cards with stronger ones
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const existingCard = board[row][col];
+                        if (existingCard && hand.length > 0) {
+                            const newCard = hand[0];
+                            if (newCard.damage > existingCard.damage && mana >= newCard.manaCost) {
+                                state.addAction('bot', {
+                                    type: ACTION_TYPES.REPLACE,
+                                    oldCard: existingCard,
+                                    newCard: newCard,
+                                    slot: { row, col }
+                                });
+                                hand.shift();
+                                state.botHand = hand;
+                                state.botMana = mana;
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // Attack if possible
+                if (lowHPCards.length > 0 && hand.length > 0) {
+                    const card = hand[0];
+                    if (card.canUseAbility()) {
+                        const target = lowHPCards[0];
+                        state.addAction('bot', {
+                            type: ACTION_TYPES.ATTACK,
+                            card: card,
+                            target: target
+                        });
+                        state.botHand = hand.slice(1);
+                        return;
+                    }
+                }
+
+                // Default: play first card to empty slot
+                if (hand.length > 0 && mana >= hand[0].manaCost) {
+                    const card = hand[0];
+                    for (let row = 0; row < GRID_ROWS; row++) {
+                        for (let col = 0; col < GRID_COLS; col++) {
+                            if (!board[row][col]) {
+                                state.addAction('bot', {
+                                    type: ACTION_TYPES.SKILL,
+                                    card: card,
+                                    slot: { row, col }
+                                });
+                                state.botHand = hand.slice(1);
+                                state.botMana = mana - card.manaCost;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            findLowHPCards(board) {
+                const cards = [];
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const card = board[row][col];
+                        if (card && !card.isDead) {
+                            cards.push({ card, hp: card.hp, slot: { row, col } });
+                        }
+                    }
+                }
+                cards.sort((a, b) => a.hp - b.hp);
+                return cards;
+            }
+        }
+
+        // ==================== 3D VIEW ====================
+        class GameView {
+            constructor(container, gameState) {
+                this.container = container;
+                this.gameState = gameState;
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.slotMeshes = [];
+                this.cardMeshes = [];
+                this.ghostMeshes = [];
+                this.vfxPool = null;
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                
+                this.init();
+                this.createGrid();
+                this.setupInteraction();
+                this.animate();
+            }
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0a0f);
+                this.scene.fog = new THREE.Fog(0x0a0a0f, 10, 30);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 8, 12);
+                this.camera.lookAt(0, 0, 0);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+                this.scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 10, 5);
+                directionalLight.castShadow = true;
+                this.scene.add(directionalLight);
+
+                const pointLight = new THREE.PointLight(0x00aaff, 0.5);
+                pointLight.position.set(0, 5, 0);
+                this.scene.add(pointLight);
+
+                // VFX Pool
+                this.vfxPool = new ObjectPool(() => this.createVFXParticle());
+
+                window.addEventListener('resize', () => this.onResize());
+            }
+
+            createVFXParticle() {
+                const geometry = new THREE.PlaneGeometry(0.1, 0.1);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: 0x00aaff,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.visible = false;
+                mesh.userData = { life: 1.0, velocity: new THREE.Vector3() };
+                return mesh;
+            }
+
+            createGrid() {
+                const sharedMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x1a1a2e,
+                    metalness: 0.8,
+                    roughness: 0.2
+                });
+
+                const highlightMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x00aaff,
+                    metalness: 0.9,
+                    roughness: 0.1,
+                    emissive: 0x00aaff,
+                    emissiveIntensity: 0.3
+                });
+
+                // Player grid (bottom)
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    this.slotMeshes[row] = [];
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const x = (col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH;
+                        const z = -row * SLOT_HEIGHT - 2;
+
+                        const geometry = new THREE.BoxGeometry(SLOT_WIDTH * 0.9, 0.1, SLOT_HEIGHT * 0.9);
+                        const mesh = new THREE.Mesh(geometry, sharedMaterial.clone());
+                        mesh.position.set(x, 0, z);
+                        mesh.receiveShadow = true;
+                        mesh.userData = { 
+                            isSlot: true, 
+                            owner: 'player', 
+                            row, 
+                            col,
+                            baseMaterial: sharedMaterial,
+                            highlightMaterial
+                        };
+                        this.scene.add(mesh);
+                        this.slotMeshes[row][col] = mesh;
+                    }
+                }
+
+                // Bot grid (top)
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    this.slotMeshes[GRID_ROWS + row] = [];
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const x = (col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH;
+                        const z = row * SLOT_HEIGHT + 2;
+
+                        const geometry = new THREE.BoxGeometry(SLOT_WIDTH * 0.9, 0.1, SLOT_HEIGHT * 0.9);
+                        const mesh = new THREE.Mesh(geometry, sharedMaterial.clone());
+                        mesh.position.set(x, 0, z);
+                        mesh.receiveShadow = true;
+                        mesh.userData = { 
+                            isSlot: true, 
+                            owner: 'bot', 
+                            row, 
+                            col,
+                            baseMaterial: sharedMaterial,
+                            highlightMaterial
+                        };
+                        this.scene.add(mesh);
+                        this.slotMeshes[GRID_ROWS + row][col] = mesh;
+                    }
+                }
+
+                // Grid lines
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333355 });
+                for (let i = 0; i <= GRID_COLS; i++) {
+                    const x = (i - GRID_COLS / 2) * SLOT_WIDTH;
+                    const points = [
+                        new THREE.Vector3(x, 0.05, -GRID_ROWS * SLOT_HEIGHT - 3),
+                        new THREE.Vector3(x, 0.05, GRID_ROWS * SLOT_HEIGHT + 3)
+                    ];
+                    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), lineMaterial);
+                    this.scene.add(line);
+                }
+            }
+
+            createCardMesh(card, isGhost = false) {
+                const group = new THREE.Group();
+
+                const geometry = new THREE.BoxGeometry(0.8, 0.05, 1.1);
+                const material = new THREE.MeshStandardMaterial({
+                    color: isGhost ? 0x444466 : 0x1a1a2e,
+                    metalness: 0.7,
+                    roughness: 0.3,
+                    transparent: isGhost,
+                    opacity: isGhost ? 0.4 : 1.0
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.castShadow = true;
+                group.add(mesh);
+
+                // HP indicator
+                const hpGeometry = new THREE.BoxGeometry(0.7, 0.02, 0.1);
+                const hpPercent = card.hp / card.maxHp;
+                const hpMaterial = new THREE.MeshBasicMaterial({
+                    color: hpPercent > 0.5 ? 0x00ff00 : hpPercent > 0.25 ? 0xffff00 : 0xff0000
+                });
+                const hpMesh = new THREE.Mesh(hpGeometry, hpMaterial);
+                hpMesh.position.set(0, 0.03, -0.4);
+                hpMesh.scale.x = hpPercent;
+                group.add(hpMesh);
+
+                // Status effects
+                let effectIdx = 0;
+                for (const [type, level] of Object.entries(card.statusEffects)) {
+                    const effectGeometry = new THREE.BoxGeometry(0.15, 0.02, 0.15);
+                    let color = 0xffffff;
+                    switch (type) {
+                        case STATUS_TYPES.POISON: color = 0x6600cc; break;
+                        case STATUS_TYPES.ICE: color = 0x00aaff; break;
+                        case STATUS_TYPES.WIND: color = 0x00ff88; break;
+                        case STATUS_TYPES.EARTH: color = 0x8b4513; break;
+                        case STATUS_TYPES.ELECTRIC: color = 0xffdd00; break;
+                    }
+                    const effectMaterial = new THREE.MeshBasicMaterial({ color });
+                    const effectMesh = new THREE.Mesh(effectGeometry, effectMaterial);
+                    effectMesh.position.set(-0.3 + effectIdx * 0.16, 0.04, 0.3);
+                    group.add(effectMesh);
+                    effectIdx++;
+                }
+
+                // Glitch effect for dead cards
+                if (card.isDead) {
+                    mesh.material.emissive = new THREE.Color(0xff0000);
+                    mesh.material.emissiveIntensity = 0.5;
+                }
+
+                group.userData = { card, hpMesh };
+                return group;
+            }
+
+            updateBoard() {
+                // Clear existing card meshes
+                this.cardMeshes.forEach(mesh => this.scene.remove(mesh));
+                this.cardMeshes = [];
+
+                // Player board
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const card = this.gameState.playerBoard[row][col];
+                        if (card) {
+                            const mesh = this.createCardMesh(card);
+                            const x = (col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH;
+                            const z = -row * SLOT_HEIGHT - 2;
+                            mesh.position.set(x, 0.1, z);
+                            this.scene.add(mesh);
+                            this.cardMeshes.push(mesh);
+                        }
+                    }
+                }
+
+                // Bot board (hidden during planning)
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const card = this.gameState.botBoard[row][col];
+                        if (card && this.gameState.phase !== PHASE.PLANNING) {
+                            const mesh = this.createCardMesh(card);
+                            const x = (col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH;
+                            const z = row * SLOT_HEIGHT + 2;
+                            mesh.position.set(x, 0.1, z);
+                            this.scene.add(mesh);
+                            this.cardMeshes.push(mesh);
+                        }
+                    }
+                }
+            }
+
+            showGhosts() {
+                // Show ghost for selected card placement
+                if (this.gameState.selectedCard && this.gameState.selectedSlot) {
+                    const ghost = this.createCardMesh(this.gameState.selectedCard, true);
+                    const { row, col } = this.gameState.selectedSlot;
+                    const x = (col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH;
+                    const z = -row * SLOT_HEIGHT - 2;
+                    ghost.position.set(x, 0.15, z);
+                    this.scene.add(ghost);
+                    this.ghostMeshes.push(ghost);
+                }
+            }
+
+            clearGhosts() {
+                this.ghostMeshes.forEach(mesh => this.scene.remove(mesh));
+                this.ghostMeshes = [];
+            }
+
+            spawnVFX(position, color, count = 10) {
+                for (let i = 0; i < count; i++) {
+                    const particle = this.vfxPool.get();
+                    particle.position.copy(position);
+                    particle.material.color.setHex(color);
+                    particle.userData.life = 1.0;
+                    particle.userData.velocity.set(
+                        (Math.random() - 0.5) * 0.1,
+                        Math.random() * 0.1,
+                        (Math.random() - 0.5) * 0.1
+                    );
+                }
+            }
+
+            setupInteraction() {
+                this.container.addEventListener('click', (e) => this.onClick(e));
+                this.container.addEventListener('mousemove', (e) => this.onMouseMove(e));
+            }
+
+            onClick(event) {
+                if (this.gameState.gameOver || this.gameState.phase !== PHASE.PLANNING) return;
+
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                // Check slot clicks
+                const allSlots = this.slotMeshes.flat();
+                const intersects = this.raycaster.intersectObjects(allSlots);
+
+                if (intersects.length > 0) {
+                    const slot = intersects[0].object;
+                    const { owner, row, col } = slot.userData;
+
+                    if (owner === 'player' && this.gameState.selectedCard) {
+                        this.gameState.selectedSlot = { row, col };
+                        this.clearGhosts();
+                        this.showGhosts();
+                        
+                        // Auto-place if valid
+                        if (!this.gameState.playerBoard[row][col]) {
+                            this.placeCard(this.gameState.selectedCard, row, col);
+                        }
+                    }
+                }
+            }
+
+            onMouseMove(event) {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                const allSlots = this.slotMeshes.flat();
+                const intersects = this.raycaster.intersectObjects(allSlots);
+
+                allSlots.forEach(slot => {
+                    slot.material = slot.userData.baseMaterial;
+                });
+
+                if (intersects.length > 0 && this.gameState.selectedCard) {
+                    const slot = intersects[0].object;
+                    if (slot.userData.owner === 'player') {
+                        slot.material = slot.userData.highlightMaterial;
+                    }
+                }
+            }
+
+            placeCard(card, row, col) {
+                if (this.gameState.playerBoard[row][col]) {
+                    // Replace existing card
+                    const oldCard = this.gameState.playerBoard[row][col];
+                    this.gameState.playerHand.push(oldCard);
+                    this.gameState.playerMana += oldCard.manaCost; // Smart refund
+                }
+
+                this.gameState.playerBoard[row][col] = card;
+                this.gameState.playerHand = this.gameState.playerHand.filter(c => c !== card);
+                this.gameState.selectedCard = null;
+                this.gameState.selectedSlot = null;
+                
+                this.clearGhosts();
+                this.updateBoard();
+                this.updateUI();
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                // Update VFX
+                this.vfxPool.active.forEach(particle => {
+                    particle.position.add(particle.userData.velocity);
+                    particle.userData.velocity.y -= 0.005;
+                    particle.userData.life -= 0.02;
+                    particle.material.opacity = particle.userData.life * 0.8;
+                    
+                    if (particle.userData.life <= 0) {
+                        this.vfxPool.release(particle);
+                    }
+                });
+
+                // Animate cards
+                this.cardMeshes.forEach(mesh => {
+                    mesh.rotation.y = Math.sin(Date.now() * 0.001 + mesh.position.x) * 0.05;
+                });
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // ==================== UI CONTROLLER ====================
+        class UIController {
+            constructor(gameState, gameView) {
+                this.gameState = gameState;
+                this.gameView = gameView;
+                this.handContainer = document.getElementById('hand-container');
+                this.replaceBtn = document.getElementById('replace-btn');
+                this.confirmBtn = document.getElementById('confirm-btn');
+                this.actionLog = document.getElementById('action-log');
+                this.restartBtn = document.getElementById('restart-btn');
+                
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.replaceBtn.addEventListener('click', () => this.onReplace());
+                this.confirmBtn.addEventListener('click', () => this.onConfirm());
+                this.restartBtn.addEventListener('click', () => location.reload());
+            }
+
+            update() {
+                this.updateHealth();
+                this.updateMana();
+                this.updatePhase();
+                this.updateRound();
+                this.updateHand();
+                this.updateButtons();
+            }
+
+            updateHealth() {
+                document.getElementById('player-hp').textContent = this.gameState.playerHP;
+                document.getElementById('bot-hp').textContent = this.gameState.botHP;
+            }
+
+            updateMana() {
+                document.getElementById('player-mana').textContent = this.gameState.playerMana;
+                document.getElementById('bot-mana').textContent = this.gameState.botMana;
+            }
+
+            updatePhase() {
+                const phaseEl = document.getElementById('phase-indicator');
+                phaseEl.textContent = `${this.gameState.phase.toUpperCase()} PHASE`;
+                
+                if (this.gameState.phase === PHASE.EXECUTION) {
+                    phaseEl.style.color = '#ff4444';
+                    phaseEl.style.borderColor = '#ff4444';
+                } else {
+                    phaseEl.style.color = '#00ff88';
+                    phaseEl.style.borderColor = '#00ff88';
+                }
+            }
+
+            updateRound() {
+                document.getElementById('round-display').textContent = `ROUND ${this.gameState.round}`;
+            }
+
+            updateHand() {
+                this.handContainer.innerHTML = '';
+                
+                this.gameState.playerHand.forEach(card => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'card';
+                    if (this.gameState.selectedCard === card) {
+                        cardEl.classList.add('selected');
+                    }
+                    if (card.isDead) {
+                        cardEl.classList.add('glitched');
+                    }
+
+                    cardEl.innerHTML = `
+                        <div class="card-mana">${card.manaCost}</div>
+                        <div class="card-name">${card.name}</div>
+                        <div class="card-stats">
+                            HIT: ${card.getEffectiveHit().toFixed(0)}%<br>
+                            DODGE: ${card.getEffectiveDodge().toFixed(0)}%<br>
+                            DMG: ${card.damage.toFixed(0)}
+                        </div>
+                        <div class="status-effects">
+                            ${Object.entries(card.statusEffects).map(([type, level]) => `
+                                <span class="status-icon status-${type}">${type[0].toUpperCase()}${level}</span>
+                            `).join('')}
+                        </div>
+                    `;
+
+                    cardEl.addEventListener('click', () => this.selectCard(card));
+                    this.handContainer.appendChild(cardEl);
+                });
+            }
+
+            updateButtons() {
+                if (this.gameState.phase === PHASE.PLANNING && this.gameState.selectedCard) {
+                    this.replaceBtn.classList.add('visible');
+                } else {
+                    this.replaceBtn.classList.remove('visible');
+                }
+
+                if (this.gameState.phase === PHASE.PLANNING && this.gameState.playerActions.length > 0) {
+                    this.confirmBtn.classList.add('visible');
+                } else {
+                    this.confirmBtn.classList.remove('visible');
+                }
+            }
+
+            selectCard(card) {
+                if (this.gameState.selectedCard === card) {
+                    this.gameState.selectedCard = null;
+                } else {
+                    this.gameState.selectedCard = card;
+                }
+                this.gameView.clearGhosts();
+                this.update();
+            }
+
+            onReplace() {
+                if (this.gameState.selectedCard) {
+                    this.gameState.playerHand = this.gameState.playerHand.filter(c => c !== this.gameState.selectedCard);
+                    this.gameState.playerMana += this.gameState.selectedCard.manaCost;
+                    this.gameState.drawCard('player');
+                    this.gameState.selectedCard = null;
+                    this.logAction('Replaced card and drew new one', 'system');
+                    this.update();
+                }
+            }
+
+            onConfirm() {
+                if (this.gameState.playerActions.length === 0) return;
+                
+                this.gameState.buildActionQueue();
+                this.gameState.phase = PHASE.EXECUTION;
+                this.executeActions();
+            }
+
+            logAction(message, type = 'system') {
+                const p = document.createElement('p');
+                p.className = `${type}-action`;
+                p.textContent = `[R${this.gameState.round}] ${message}`;
+                this.actionLog.appendChild(p);
+                this.actionLog.scrollTop = this.actionLog.scrollHeight;
+            }
+
+            async executeActions() {
+                const queue = this.gameState.actionQueue;
+                
+                for (const action of queue) {
+                    await this.executeAction(action);
+                    this.gameView.updateBoard();
+                    this.update();
+                    
+                    if (this.checkGameOver()) break;
+                }
+
+                if (!this.gameState.gameOver) {
+                    this.startCleanup();
+                }
+            }
+
+            async executeAction(action) {
+                const { owner, type, card, target, slot } = action;
+                
+                this.logAction(`${owner.toUpperCase()}: ${type}`, owner);
+
+                if (type === ACTION_TYPES.SKILL && slot) {
+                    // Place card on board
+                    const board = owner === 'player' ? this.gameState.playerBoard : this.gameState.botBoard;
+                    if (board[slot.row][slot.col]) {
+                        // Replace
+                        const oldCard = board[slot.row][slot.col];
+                        const hand = owner === 'player' ? this.gameState.playerHand : this.gameState.botHand;
+                        hand.push(oldCard);
+                    }
+                    board[slot.row][slot.col] = card;
+                    
+                    if (owner === 'player') {
+                        this.gameState.playerHand = this.gameState.playerHand.filter(c => c !== card);
+                        this.gameState.playerMana -= card.manaCost;
+                    } else {
+                        this.gameState.botHand = this.gameState.botHand.filter(c => c !== card);
+                        this.gameState.botMana -= card.manaCost;
+                    }
+                } else if (type === ACTION_TYPES.REPLACE) {
+                    const board = owner === 'player' ? this.gameState.playerBoard : this.gameState.botBoard;
+                    board[slot.row][slot.col] = card.newCard;
+                    
+                    if (owner === 'player') {
+                        this.gameState.playerHand.push(card.oldCard);
+                        this.gameState.playerMana += card.oldCard.manaCost;
+                    }
+                } else if (type === ACTION_TYPES.ATTACK && target) {
+                    // Electric damage trigger
+                    if (card.statusEffects[STATUS_TYPES.ELECTRIC]) {
+                        card.takeDamage(10);
+                        this.logAction(`${card.name} takes electric damage`, 'system');
+                    }
+
+                    // Calculate hit/miss
+                    const hitChance = card.getEffectiveHit();
+                    const dodgeChance = target.card.getEffectiveDodge();
+                    const finalHit = hitChance - dodgeChance;
+
+                    if (Math.random() * 100 < finalHit) {
+                        let damage = card.damage;
+                        
+                        // Poison damage
+                        if (target.card.statusEffects[STATUS_TYPES.POISON] && target.card.hp > 0) {
+                            const poisonDmg = Math.floor(target.card.hp * 0.1 * target.card.statusEffects[STATUS_TYPES.POISON]);
+                            target.card.takeDamage(poisonDmg);
+                            this.logAction(`Poison deals ${poisonDmg} to ${target.card.name}`, 'system');
+                        }
+
+                        target.card.takeDamage(damage);
+                        this.gameView.spawnVFX(
+                            new THREE.Vector3(
+                                (target.slot.col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH,
+                                0.5,
+                                (owner === 'player' ? -target.slot.row : target.slot.row) * SLOT_HEIGHT + (owner === 'player' ? -2 : 2)
+                            ),
+                            0xff0000,
+                            20
+                        );
+
+                        if (target.card.hp <= 0) {
+                            this.logAction(`${target.card.name} destroyed! Overkill: ${Math.abs(target.card.hp)}`, 'system');
+                        } else {
+                            this.logAction(`${target.card.name} takes ${damage} damage (HP: ${target.card.hp})`, 'system');
+                        }
+                    } else {
+                        this.logAction(`Attack missed!`, 'system');
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            startCleanup() {
+                setTimeout(() => {
+                    this.gameState.phase = PHASE.CLEANUP;
+                    this.cleanupPhase();
+                }, 1000);
+            }
+
+            cleanupPhase() {
+                // Remove dead cards
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const card = this.gameState.playerBoard[row][col];
+                        if (card && card.isDead) {
+                            this.gameState.playerBoard[row][col] = null;
+                            this.gameView.spawnVFX(
+                                new THREE.Vector3((col - GRID_COLS / 2 + 0.5) * SLOT_WIDTH, 0.5, -row * SLOT_HEIGHT - 2),
+                                0xff0000,
+                                30
+                            );
+                            this.logAction(`${card.name} removed from board`, 'system');
+                        }
+
+                        const botCard = this.gameState.botBoard[row][col];
+                        if (botCard && botCard.isDead) {
+                            this.gameState.botBoard[row][col] = null;
+                        }
+                    }
+                }
+
+                // Decay damage (starting round 3)
+                if (this.gameState.round >= 3) {
+                    for (let row = 0; row < GRID_ROWS; row++) {
+                        for (let col = 0; col < GRID_COLS; col++) {
+                            if (!this.gameState.playerBoard[row][col]) {
+                                const decayDmg = row === 0 ? 10 : 20;
+                                this.gameState.playerHP -= decayDmg;
+                                this.logAction(`Decay: -${decayDmg} HP (empty slot)`, 'system');
+                            }
+                        }
+                    }
+                }
+
+                this.gameState.round++;
+                this.gameState.startRound();
+                this.gameView.updateBoard();
+                this.update();
+
+                // Bot decision
+                setTimeout(() => {
+                    const botAI = new BotAI(this.gameState, this.gameView);
+                    botAI.makeDecision();
+                    this.logAction('Bot planned actions', 'bot');
+                }, 500);
+            }
+
+            checkGameOver() {
+                if (this.gameState.playerHP <= 0 && this.gameState.botHP <= 0) {
+                    // Tie-breaker
+                    const playerTotal = this.calculateTotalHP('player');
+                    const botTotal = this.calculateTotalHP('bot');
+                    
+                    if (playerTotal >= botTotal) {
+                        this.endGame('victory');
+                    } else {
+                        this.endGame('defeat');
+                    }
+                    return true;
+                } else if (this.gameState.playerHP <= 0) {
+                    this.endGame('defeat');
+                    return true;
+                } else if (this.gameState.botHP <= 0) {
+                    this.endGame('victory');
+                    return true;
+                }
+                return false;
+            }
+
+            calculateTotalHP(owner) {
+                const board = owner === 'player' ? this.gameState.playerBoard : this.gameState.botBoard;
+                let total = owner === 'player' ? this.gameState.playerHP : this.gameState.botHP;
+                
+                for (let row = 0; row < GRID_ROWS; row++) {
+                    for (let col = 0; col < GRID_COLS; col++) {
+                        const card = board[row][col];
+                        if (card) {
+                            total += card.hp;
+                        }
+                    }
+                }
+                
+                return total;
+            }
+
+            endGame(result) {
+                this.gameState.gameOver = true;
+                this.gameState.winner = result === 'victory' ? 'player' : 'bot';
+                
+                const gameOverEl = document.getElementById('game-over');
+                const gameOverText = document.getElementById('game-over-text');
+                
+                gameOverEl.style.display = 'flex';
+                gameOverEl.className = result;
+                gameOverText.textContent = result === 'victory' ? 'VICTORY' : 'DEFEAT';
+            }
+        }
+
+        // ==================== MAIN GAME ====================
+        class Game {
+            constructor() {
+                this.container = document.getElementById('canvas-container');
+                this.gameState = new GameState();
+                this.gameView = new GameView(this.container, this.gameState);
+                this.ui = new UIController(this.gameState, this.gameView);
+                this.botAI = new BotAI(this.gameState, this.gameView);
+                
+                this.init();
+            }
+
+            init() {
+                // Initial draw
+                this.gameState.drawCard('player');
+                this.gameState.drawCard('player');
+                this.gameState.drawCard('player');
+                this.gameState.drawCard('bot');
+                this.gameState.drawCard('bot');
+                this.gameState.drawCard('bot');
+
+                // Bot plans first action
+                this.botAI.makeDecision();
+
+                this.ui.update();
+                this.ui.logAction('Battle started!', 'system');
+            }
+        }
+
+        // Start game when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.game = new Game();
+        });
+    </script>
+</body>
+</html>
